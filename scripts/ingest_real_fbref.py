@@ -49,7 +49,7 @@ def clean_columns(df: pd.DataFrame) -> pd.DataFrame:
 def run_ingestion():
     import soccerdata as sd
     print("=" * 70)
-    print("🚀 Starting ScoutBench Real FBref ETL Pipeline (2024/25 Big 5 Leagues)")
+    print("[ETL] Starting ScoutBench Real FBref ETL Pipeline (2024/25 Big 5 Leagues)")
     print("=" * 70)
 
     leagues = ["ESP-La Liga", "ENG-Premier League", "GER-Bundesliga", "ITA-Serie A", "FRA-Ligue 1"]
@@ -115,7 +115,7 @@ def run_ingestion():
         print(f"  [Warning] Keeper Adv table warning: {e}")
         df_gk_adv = pd.DataFrame()
 
-    print("\n🔗 Executing Multi-Table Relational Joins on (player, team, league)...")
+    print("\n[JOIN] Executing Multi-Table Relational Joins on (player, team, league)...")
     
     # Base dataframe
     join_keys = ["league", "season", "team", "player"]

@@ -300,3 +300,182 @@ RADAR_THEME = {
     "grid_color": COLOR_PALETTES[DEFAULT_PALETTE_NAME]["grid_color"],
     "accent_color": COLOR_PALETTES[DEFAULT_PALETTE_NAME]["accent_color"]
 }
+
+# --------------------------------------------------------------------------
+# Continuous Positional Tactical Spectrum Configuration
+# 4 Continuous Tactical Axes per Position Group with Weighted Percentiles
+# --------------------------------------------------------------------------
+TACTICAL_SPECTRUM_CONFIG: Dict[str, Dict[str, Dict[str, any]]] = {
+    "Goalkeeper": {
+        "Shot-Stopping Value": {
+            "archetype": "Elite Shot-Stopper",
+            "weights": {"psxg_net_per90": 0.60, "save_pct": 0.40},
+            "description": "Post-shot xG prevention and save efficiency."
+        },
+        "Sweeper Proactivity": {
+            "archetype": "Proactive Sweeper-Keeper",
+            "weights": {"def_actions_outside_pen_per90": 0.60, "avg_dist_def_actions": 0.40},
+            "description": "High starting line, sweeping outside the box."
+        },
+        "Build-Up & Distribution": {
+            "archetype": "Ball-Playing Goalkeeper",
+            "weights": {"pass_completion_pct": 0.50, "passes_completed_long_pct": 0.50},
+            "description": "Short circulation and accurate long launching."
+        },
+        "Aerial Box Command": {
+            "archetype": "Commanding Aerial Keeper",
+            "weights": {"crosses_stopped_pct": 1.0},
+            "description": "Dominance in claiming crosses inside the box."
+        }
+    },
+    "Centreback": {
+        "Line-Breaking Progression": {
+            "archetype": "Ball-Playing Line Breaker",
+            "weights": {"progressive_passes_per90": 0.35, "progressive_passing_distance_per90": 0.35, "passes_into_final_third_per90": 0.30},
+            "description": "Bypassing opposition pressing lines from deep build-up."
+        },
+        "Defensive Proactivity & Interceptions": {
+            "archetype": "Aggressive Front-Foot Stopper",
+            "weights": {"padj_interceptions_per90": 0.50, "padj_tackles_per90": 0.30, "ball_recoveries_per90": 0.20},
+            "description": "Stepping out of the backline to pinch and intercept."
+        },
+        "Box & Aerial Dominance": {
+            "archetype": "Dominant Box Anchor",
+            "weights": {"aerial_win_pct": 0.45, "blocks_per90": 0.30, "tackle_win_pct": 0.25},
+            "description": "Physical supremacy in aerial and ground challenges."
+        },
+        "Space Carrying & Build-Up": {
+            "archetype": "Ball-Carrying Defender",
+            "weights": {"progressive_carries_per90": 0.50, "take_on_success_pct": 0.25, "pass_completion_pct": 0.25},
+            "description": "Carrying the ball into midfield to draw pressing triggers."
+        }
+    },
+    "Fullback / Wingback": {
+        "Inverted Playmaking & Creation": {
+            "archetype": "Inverted Half-Space Creator",
+            "weights": {"xAG_per90": 0.35, "sca_per90": 0.30, "passes_into_penalty_area_per90": 0.20, "key_passes_per90": 0.15},
+            "description": "Creating high-value chances from half-space pockets."
+        },
+        "Flank Carrying & Overlap": {
+            "archetype": "Overlapping Flank Threat",
+            "weights": {"progressive_carries_per90": 0.40, "take_ons_attempted_per90": 0.35, "take_on_success_pct": 0.25},
+            "description": "Driving the flank to isolate defenders and reach the byline."
+        },
+        "1v1 Defensive Lockdown": {
+            "archetype": "Lockdown Defensive Fullback",
+            "weights": {"padj_tackles_per90": 0.45, "tackle_win_pct": 0.35, "aerial_win_pct": 0.20},
+            "description": "Isolating and neutralizing opponent wingers."
+        },
+        "High Counter-Press & Recovery": {
+            "archetype": "High-Energy Pressing Fullback",
+            "weights": {"tackles_att_3rd_per90": 0.40, "ball_recoveries_per90": 0.35, "padj_interceptions_per90": 0.25},
+            "description": "Immediate counter-pressing upon turnover in high areas."
+        }
+    },
+    "Central / Defensive Midfielder": {
+        "Tempo Dictation & Progression": {
+            "archetype": "Deep Tempo Dictator",
+            "weights": {"progressive_passes_per90": 0.40, "passes_into_final_third_per90": 0.35, "pass_completion_pct": 0.25},
+            "description": "Dictating pace, controlling possession rhythms, and feeding forwards."
+        },
+        "Press Resistance & Retention": {
+            "archetype": "Press-Resistant Pivot",
+            "weights": {"pass_completion_pct": 0.50, "take_on_success_pct": 0.30, "progressive_carries_per90": 0.20},
+            "description": "Retaining possession and navigating out of intense pressure."
+        },
+        "Defensive Screening & Ball-Winning": {
+            "archetype": "Defensive Ball-Winner",
+            "weights": {"padj_tackles_per90": 0.35, "padj_interceptions_per90": 0.35, "blocks_per90": 0.15, "aerial_win_pct": 0.15},
+            "description": "Protecting central channels and shielding the defensive line."
+        },
+        "Box-to-Box Transition Engine": {
+            "archetype": "Box-to-Box Dynamic Engine",
+            "weights": {"progressive_carries_per90": 0.35, "ball_recoveries_per90": 0.30, "sca_per90": 0.20, "npxG_per90": 0.15},
+            "description": "Driving between both boxes with physical carrying and dynamic arrivals."
+        }
+    },
+    "Winger / Attacking Mid": {
+        "1v1 Touchline Isolation": {
+            "archetype": "1v1 Isolation Winger",
+            "weights": {"take_ons_attempted_per90": 0.45, "take_on_success_pct": 0.30, "carries_into_penalty_area_per90": 0.25},
+            "description": "Beating defenders in wide 1v1 duels and penetrating into the box."
+        },
+        "Pocket Playmaking & Creation": {
+            "archetype": "Wide Half-Space Playmaker",
+            "weights": {"xAG_per90": 0.35, "sca_per90": 0.35, "key_passes_per90": 0.30},
+            "description": "Delivering key passes, through-balls, and creating high-quality shots."
+        },
+        "Inverted Goal Threat": {
+            "archetype": "Inverted Inside Goalscorer",
+            "weights": {"npxG_per90": 0.45, "shots_total_per90": 0.30, "touches_att_pen_per90": 0.25},
+            "description": "Cutting inside to generate direct goal threat and high shot volume."
+        },
+        "High-Press & Transition Engine": {
+            "archetype": "High-Press Transition Winger",
+            "weights": {"tackles_att_3rd_per90": 0.40, "padj_tackles_per90": 0.30, "ball_recoveries_per90": 0.30},
+            "description": "Leading the counter-press, disrupting build-up, and winning high regains."
+        }
+    },
+    "Centre-Forward / Striker": {
+        "Box Finishing & Shot Generation": {
+            "archetype": "Elite Box Poacher",
+            "weights": {"npxG_per90": 0.45, "shots_on_target_pct": 0.30, "touches_att_pen_per90": 0.25},
+            "description": "Maximizing penalty box efficiency and high-conversion finishing."
+        },
+        "Link-Up Play & Creative Dropping": {
+            "archetype": "Creative False Nine / Link-Up CF",
+            "weights": {"xAG_per90": 0.35, "sca_per90": 0.35, "key_passes_per90": 0.15, "pass_completion_pct": 0.15},
+            "description": "Dropping into intermediate lines to connect midfield runners."
+        },
+        "Channel Running & Aerial Physicality": {
+            "archetype": "Physical Target & Channel Outlet",
+            "weights": {"aerial_win_pct": 0.50, "carries_into_penalty_area_per90": 0.30, "shots_total_per90": 0.20},
+            "description": "Stretching channels, holding up long balls, and aerial presence."
+        },
+        "High-Press Disruptor": {
+            "archetype": "First-Line Pressing Disruptor",
+            "weights": {"tackles_att_3rd_per90": 0.50, "ball_recoveries_per90": 0.30, "padj_tackles_per90": 0.20},
+            "description": "Initiating high pressing traps against opponent goalkeepers and CBs."
+        }
+    }
+}
+
+# --------------------------------------------------------------------------
+# Universal Behavioral & Work-Rate Indexes Configuration
+# --------------------------------------------------------------------------
+BEHAVIORAL_INDEX_CONFIG = {
+    "High-Press & Work-Rate": {
+        "weights": {
+            "tackles_att_3rd_per90": 0.35,
+            "padj_tackles_per90": 0.25,
+            "padj_interceptions_per90": 0.20,
+            "ball_recoveries_per90": 0.20
+        },
+        "description": "Quantifies off-the-ball defensive intensity, high-press regains, and defensive engagement rate."
+    },
+    "Verticality & Directness": {
+        "weights": {
+            "progressive_passing_distance_per90": 0.40,
+            "progressive_carries_per90": 0.35,
+            "passes_into_final_third_per90": 0.25
+        },
+        "description": "Measures forward yardage and how directly a player propels the team toward goal."
+    },
+    "Press-Resistance & Retention": {
+        "weights": {
+            "pass_completion_pct": 0.50,
+            "take_on_success_pct": 0.30,
+            "tackle_win_pct": 0.20
+        },
+        "description": "Measures ball security and ability to maintain control under defensive pressure."
+    },
+    "Offensive Threat & Opportunity": {
+        "weights": {
+            "npxG_per90": 0.40,
+            "xAG_per90": 0.35,
+            "sca_per90": 0.25
+        },
+        "description": "Measures direct goal and assist threat per 90 minutes."
+    }
+}
+

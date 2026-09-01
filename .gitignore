@@ -18,7 +18,15 @@ LEARNING_AND_INTERVIEW_GUIDE.md
 *notes*.md
 scratch/
 brain/
+.agents/
 .system_generated/
+*.log
+logs/
+.streamlit/
+GEMINI.md
+AGENTS.md
+
+
 
 # Whitelist essential documentation
 !README.md

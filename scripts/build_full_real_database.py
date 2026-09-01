@@ -20,7 +20,8 @@ import numpy as np
 SCRIPTS_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS_DIR))
 
-from calibrate_stats import ELITE_STAR_PROFILES
+from calibrate_stats import ELITE_STAR_PROFILES, calibrate_master_dataset
+from enrich_metadata import enrich_master_database
 
 DATA_DIR = SCRIPTS_DIR.parent / "data"
 PROCESSED_DIR = DATA_DIR / "processed"
@@ -413,6 +414,14 @@ def build_dual_season_database():
     print(f"Total Clubs Covered: {df['team'].nunique()} (across {df['league'].nunique()} Leagues)")
     print(f"Seasons Available: {sorted(df['season'].unique().tolist())}")
     print(f"Saved directly to: {out_file}")
+    
+    # 2. Calibrate elite stats
+    print("\n[STEP 2] Calibrating elite superstar profiles...")
+    calibrate_master_dataset()
+    
+    # 3. Enrich with biographical, physical, and financial metadata
+    print("\n[STEP 3] Enriching with R1 metadata...")
+    df = enrich_master_database()
     return df
 
 
