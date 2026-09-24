@@ -99,7 +99,7 @@ def create_pizza_radar(
 
     # Add custom styled title & subtitles
     title_text = f"{player_name}"
-    subtitle_text = f"{team_name} | {league_name} ({season}) | {minutes:,} Mins\nTactical Archetype: {archetype}"
+    subtitle_text = f"{team_name} | {league_name} ({season}) | {minutes:,} mins"
 
     fig.text(
         0.515, 0.965, title_text, size=20,
@@ -123,7 +123,7 @@ def create_pizza_radar(
 
     # Add credit watermark
     fig.text(
-        0.98, 0.01, "ScoutBench Analytics | Percentiles vs. Positional Cohort (Min. 900 Mins)",
+        0.98, 0.01, "ScoutBench · Positional Percentiles (≥900 min)",
         size=8, color=theme.get("text_secondary", "#94A3B8"), ha="right"
     )
 
@@ -166,9 +166,9 @@ def create_quadrant_scatter(
         mode="markers",
         marker=dict(
             size=7,
-            color="#64748B",
+            color=theme.get("text_secondary", "#94A3B8"),
             opacity=0.60,
-            line=dict(width=0.5, color="#94A3B8")
+            line=dict(width=0.5, color=theme.get("text_secondary", "#94A3B8"))
         ),
         text=other_players.apply(
             lambda r: f"<b>{r['player']}</b> ({r.get('team', '')})<br>Age: {r.get('age', 'N/A')}<br>{x_label}: {r[x_metric]}<br>{y_label}: {r[y_metric]}",
@@ -193,10 +193,10 @@ def create_quadrant_scatter(
             y=[r[y_metric]],
             mode="markers+text",
             marker=dict(
-                size=16,
+                size=12,
                 color=accent_col,
-                symbol="star",
-                line=dict(width=2, color="#FFFFFF")
+                symbol="circle",
+                line=dict(width=2.5, color="#FFFFFF")
             ),
             text=[f"<b>{target_player}</b>"],
             textposition="top center",
@@ -215,7 +215,7 @@ def create_quadrant_scatter(
         template="plotly_dark",
         paper_bgcolor=canvas_bg,
         plot_bgcolor=card_bg,
-        title=f"<b>Tactical Benchmark: {x_label} vs. {y_label}</b><br><span style='font-size:12px; color:#94A3B8;'>Cohort: {position_group} (Dashed lines indicate Cohort Medians)</span>",
+        title=f"<b>{x_label} vs. {y_label}</b><br><span style='font-size:12px; color:{text_col};'>{position_group} cohort · dashed = median</span>",
         xaxis=dict(
             title=f"<b>{x_label}</b>",
             gridcolor=grid_col,
@@ -410,7 +410,7 @@ def create_pitch_heatmap(
     
     # Plot smooth Gaussian KDE density contours
     # Colormap selection based on theme
-    kde_cmap = "inferno" if "Opta" in str(theme) or "Athletic" in str(theme) else "magma"
+    kde_cmap = theme.get("heatmap_cmap", "inferno")
     
     pitch.kdeplot(
         x=x,
@@ -443,7 +443,7 @@ def create_pitch_heatmap(
     
     ax.text(
         0.50, 1.05,
-        f"{player_name} — Tactical Operational Density",
+        f"{player_name} — Action Heatmap",
         fontsize=13,
         fontweight="bold",
         color=text_primary,
@@ -454,7 +454,7 @@ def create_pitch_heatmap(
     
     ax.text(
         0.50, 1.01,
-        f"{team_name} · {position_group} | Spatial KDE Action Surface",
+        f"{team_name} · {position_group}",
         fontsize=9.5,
         color=text_secondary,
         ha="center",

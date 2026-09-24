@@ -32,7 +32,11 @@ from src.visualizer import (
     create_multi_player_radar
 )
 
-# -----------------------------------------------------------------------------
+# Helper: convert hex to rgba (avoids browser-dependent hex-alpha appending)
+def _hex_to_rgba(hex_code: str, alpha: float) -> str:
+    h = hex_code.lstrip("#")
+    return f"rgba({int(h[0:2], 16)}, {int(h[2:4], 16)}, {int(h[4:6], 16)}, {alpha})"
+
 # Streamlit Page Configuration & Styling
 # -----------------------------------------------------------------------------
 st.set_page_config(
@@ -45,41 +49,43 @@ st.set_page_config(
 # -----------------------------------------------------------------------------
 # Sidebar: Navigation & Filters
 # -----------------------------------------------------------------------------
-st.sidebar.title("SCOUTBENCH")
-st.sidebar.markdown("*Tactical Recruitment & Player Dossier Workbench*")
-st.sidebar.markdown("---")
+st.sidebar.title("ScoutBench")
+st.sidebar.caption("Tactical scouting workbench")
 
+# Reserve a container at the top for search (populated after data loads)
+_search_container = st.sidebar.container()
+
+st.sidebar.markdown("---")
 col_s1, col_s2 = st.sidebar.columns(2)
 with col_s1:
     selected_season = st.selectbox("Season", ["2025/26", "2024/25"], index=0)
 with col_s2:
     min_minutes = st.number_input("Min Minutes", min_value=300, max_value=2500, value=900, step=100)
 
-palette_names = list(COLOR_PALETTES.keys())
-default_palette_idx = palette_names.index("The Athletic (Editorial Pitch)") if "The Athletic (Editorial Pitch)" in palette_names else 0
-selected_palette_name = st.sidebar.selectbox("UI Color Theme", palette_names, index=default_palette_idx)
+palette_names = ["The Athletic", "Opta Dark", "Monochrome", "DataMB"]
+default_palette_idx = palette_names.index("The Athletic") if "The Athletic" in palette_names else 0
+selected_palette_name = st.sidebar.selectbox("Theme", palette_names, index=default_palette_idx)
 theme = COLOR_PALETTES[selected_palette_name]
 
 # Custom CSS for Selected Color Theme
 st.markdown(f"""
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+    .stApp {{
+        background-color: {theme['canvas_bg']};
+        font-family: 'Inter', 'Segoe UI', -apple-system, system-ui, sans-serif;
+    }}
     .main {{
         background-color: {theme['canvas_bg']};
     }}
-    .stApp {{
-        background-color: {theme['canvas_bg']};
-    }}
-    .dossier-card {{
-        background-color: {theme['card_bg']};
-        border-radius: 12px;
-        padding: 20px;
-        border: 1px solid {theme['border_color']};
-        margin-bottom: 20px;
+    .main h3 {{
+        margin-top: 48px;
+        margin-bottom: 16px;
     }}
     .archetype-badge {{
         display: inline-block;
         background: {theme['accent_color']};
-        color: {'#000000' if selected_palette_name in ['Opta Pro (Midnight Pitch)', 'DataMB Studio (Scandinavian Deep)'] else '#FFFFFF'};
+        color: {'#000000' if selected_palette_name in ['Opta Dark', 'DataMB'] else '#FFFFFF'};
         padding: 6px 14px;
         border-radius: 20px;
         font-weight: 800;
@@ -99,9 +105,9 @@ st.markdown(f"""
         margin-top: 4px;
     }}
     .strength-badge {{
-        background-color: {theme['slice_colors'].get('Defending & Pressing', '#10B981')}22;
-        border: 1px solid {theme['slice_colors'].get('Defending & Pressing', '#10B981')};
-        color: {theme['slice_colors'].get('Defending & Pressing', '#10B981')};
+        background-color: {_hex_to_rgba(theme.get('positive_color', '#10B981'), 0.13)};
+        border: 1px solid {theme.get('positive_color', '#10B981')};
+        color: {theme.get('positive_color', '#10B981')};
         padding: 6px 12px;
         border-radius: 8px;
         font-size: 13px;
@@ -109,9 +115,9 @@ st.markdown(f"""
         font-weight: 600;
     }}
     .vuln-badge {{
-        background-color: {theme['accent_color']}22;
-        border: 1px solid {theme['accent_color']};
-        color: {theme['accent_color']};
+        background-color: {_hex_to_rgba(theme.get('negative_color', '#E06D53'), 0.13)};
+        border: 1px solid {theme.get('negative_color', '#E06D53')};
+        color: {theme.get('negative_color', '#E06D53')};
         padding: 6px 12px;
         border-radius: 8px;
         font-size: 13px;
@@ -119,23 +125,23 @@ st.markdown(f"""
         font-weight: 600;
     }}
     .intel-note-positive {{
-        background-color: {theme['slice_colors'].get('Defending & Pressing', '#10B981')}18;
-        border-left: 4px solid {theme['slice_colors'].get('Defending & Pressing', '#10B981')};
+        background-color: {_hex_to_rgba(theme.get('positive_color', '#10B981'), 0.09)};
+        border-left: 4px solid {theme.get('positive_color', '#10B981')};
         padding: 10px 14px;
         border-radius: 0 8px 8px 0;
         margin-bottom: 10px;
         font-size: 13px;
     }}
     .intel-note-warning {{
-        background-color: {theme['accent_color']}18;
-        border-left: 4px solid {theme['accent_color']};
+        background-color: {_hex_to_rgba(theme.get('negative_color', '#E06D53'), 0.09)};
+        border-left: 4px solid {theme.get('negative_color', '#E06D53')};
         padding: 10px 14px;
         border-radius: 0 8px 8px 0;
         margin-bottom: 10px;
         font-size: 13px;
     }}
     .intel-note-neutral {{
-        background-color: {theme['border_color']}66;
+        background-color: {_hex_to_rgba(theme['border_color'], 0.40)};
         border-left: 4px solid {theme['text_secondary']};
         padding: 10px 14px;
         border-radius: 0 8px 8px 0;
@@ -190,6 +196,37 @@ st.markdown(f"""
         font-weight: 700;
         color: {theme['text_primary']};
     }}
+    .stat-grid {{
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 10px;
+        margin-top: 8px;
+        margin-bottom: 12px;
+    }}
+    .stat-cell {{
+        background-color: {theme['card_bg']};
+        border: 1px solid {theme['border_color']};
+        border-radius: 8px;
+        padding: 10px 14px;
+    }}
+    .stat-cell-label {{
+        font-size: 10px;
+        font-weight: 700;
+        color: {theme['text_secondary']};
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 4px;
+    }}
+    .stat-cell-value {{
+        font-size: 16px;
+        font-weight: 800;
+        color: {theme['text_primary']};
+    }}
+    .stat-cell-pct {{
+        font-size: 11px;
+        color: {theme['text_secondary']};
+        font-weight: 600;
+    }}
     .delta-table-container {{
         width: 100%;
         border-collapse: collapse;
@@ -214,14 +251,14 @@ st.markdown(f"""
         color: {theme['text_primary']};
     }}
     .delta-table-container tr:hover {{
-        background-color: {theme['card_bg']}88;
+        background-color: {_hex_to_rgba(theme['card_bg'], 0.53)};
     }}
     .delta-pos {{
-        color: #10B981;
+        color: {theme.get('positive_color', '#10B981')};
         font-weight: 700;
     }}
     .delta-neg {{
-        color: #E06D53;
+        color: {theme.get('negative_color', '#E06D53')};
         font-weight: 700;
     }}
     .delta-neu {{
@@ -278,59 +315,54 @@ df_all = get_dataset(min_minutes)
 df = df_all[df_all["season"] == selected_season].copy() if "season" in df_all.columns else df_all
 search_index = build_search_index(min_minutes, selected_season)
 
-# Search Mode Selector
-search_mode = st.sidebar.radio(
-    "Navigation Method",
-    ["Search by Name", "League & Club Filter"],
-    horizontal=True
-)
-
-if search_mode == "Search by Name":
-    st.sidebar.markdown("#### Search Player")
-    all_names = sorted(df["player"].unique().tolist())
-    chosen = st.sidebar.selectbox(
-        "Start typing a player name...",
-        options=all_names,
-        index=None,
-        placeholder="e.g. Pedri, Lamine Yamal, Cubarsi, Gordon, Haaland...",
-        format_func=lambda p: search_index.get(p, p),
-        key="name_search"
+# Populate the search container (renders at the top of sidebar)
+with _search_container:
+    search_mode = st.radio(
+        "Find Player",
+        ["Search", "Browse"],
+        horizontal=True
     )
-    if chosen is not None:
-        st.session_state.target_player = chosen
 
-else:  # Hierarchical Browser (League -> Club -> Player)
-    st.sidebar.markdown("#### Browse by League & Club")
+    if search_mode == "Search":
+        all_names = sorted(df["player"].unique().tolist())
+        chosen = st.selectbox(
+            "Player",
+            options=all_names,
+            index=None,
+            placeholder="Search by name...",
+            format_func=lambda p: search_index.get(p, p),
+            key="name_search"
+        )
+        if chosen is not None:
+            st.session_state.target_player = chosen
 
-    # 1. League selector
-    leagues = sorted(df["league"].unique().tolist())
-    default_lg = leagues.index("La Liga") if "La Liga" in leagues else 0
-    selected_league = st.sidebar.selectbox("1. Select League", leagues, index=default_lg)
+    else:  # Browse
+        leagues = sorted(df["league"].unique().tolist())
+        default_lg = leagues.index("La Liga") if "La Liga" in leagues else 0
+        selected_league = st.selectbox("League", leagues, index=default_lg)
 
-    league_df = df[df["league"] == selected_league]
+        league_df = df[df["league"] == selected_league]
 
-    # 2. Club selector (strictly filtered by league)
-    clubs = sorted(league_df["team"].unique().tolist())
-    default_club = clubs.index("Barcelona") if "Barcelona" in clubs else 0
-    selected_club = st.sidebar.selectbox("2. Select Club", clubs, index=default_club)
+        clubs = sorted(league_df["team"].unique().tolist())
+        default_club = clubs.index("Barcelona") if "Barcelona" in clubs else 0
+        selected_club = st.selectbox("Club", clubs, index=default_club)
 
-    club_df = league_df[league_df["team"] == selected_club]
+        club_df = league_df[league_df["team"] == selected_club]
 
-    # 3. Player selector (strictly filtered by club)
-    club_players = sorted(club_df["player"].unique().tolist())
-    if club_players:
-        prev = st.session_state.get("target_player")
-        default_pl = club_players.index(prev) if prev in club_players else 0
-        chosen_player = st.sidebar.selectbox("3. Select Player", club_players, index=default_pl)
-        st.session_state.target_player = chosen_player
-    else:
-        st.sidebar.warning("No players in this club meet the minimum minutes filter.")
+        club_players = sorted(club_df["player"].unique().tolist())
+        if club_players:
+            prev = st.session_state.get("target_player")
+            default_pl = club_players.index(prev) if prev in club_players else 0
+            chosen_player = st.selectbox("Player", club_players, index=default_pl)
+            st.session_state.target_player = chosen_player
+        else:
+            st.warning("No players in this club meet the minimum minutes filter.")
 
-st.sidebar.markdown("---")
-st.sidebar.info(
-    "ScoutBench features **6 specialized positional templates** (Goalkeeper, Centreback, Fullback, "
-    "Central Midfielder, Winger/AM, Striker) with pAdj normalization and continuous tactical spectrums."
-)
+with st.sidebar.expander("About ScoutBench"):
+    st.info(
+        "Features **6 positional templates** (Goalkeeper, Centreback, Fullback, "
+        "Central Midfielder, Winger/AM, Striker) with pAdj normalization and continuous tactical spectrums."
+    )
 
 # -----------------------------------------------------------------------------
 # Main Application Content: Player Dossier
@@ -374,23 +406,19 @@ if player_row is not None:
     )
     
     # -------------------------------------------------------------------------
-    # 0. Dossier Header & Profile Overview Banner (R1)
+    # 0. Dossier Header & Profile Overview
     # -------------------------------------------------------------------------
-    col_title, col_badge = st.columns([3, 1.4])
-    with col_title:
-        st.title(f"{player_row['player']}")
-        st.markdown(
-            f"**Club:** `{player_row['team']}` | **League:** `{player_row['league']}` | "
-            f"**Position:** `{pos_group}` | **Age:** `{player_row['age']}` | "
-            f"**Minutes:** `{player_row['minutes']:,}` | **Team Poss:** `{player_row['team_possession_pct']}%`"
-        )
-    with col_badge:
-        st.markdown("<div style='text-align: right;'>", unsafe_allow_html=True)
-        st.markdown(f"<span class='archetype-badge'>■ {archetype.upper()}</span>", unsafe_allow_html=True)
-        if secondary_archetype:
-            st.markdown(f"<br><span class='secondary-badge'>Tendency: {secondary_archetype}</span>", unsafe_allow_html=True)
-        st.markdown(f"<p style='color:{theme['text_secondary']}; font-size:11px; margin-top:4px;'>Positional Cohort: <b>{pos_group}</b> ({len(cohort_df)} peers)</p>", unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+    st.title(f"{player_row['player']}")
+    badge_html = f"<span class='archetype-badge'>{archetype}</span>"
+    if secondary_archetype:
+        badge_html += f" <span class='secondary-badge'>Tendency: {secondary_archetype}</span>"
+    badge_html += f" <span style='color:{theme['text_secondary']}; font-size:11px; margin-left:12px;'>{pos_group} · {len(cohort_df)} peers</span>"
+    st.markdown(badge_html, unsafe_allow_html=True)
+    st.markdown(
+        f"**{player_row['team']}** · {player_row['league']} · "
+        f"Age {player_row['age']} · {player_row['minutes']:,} min · "
+        f"{player_row['team_possession_pct']}% team possession"
+    )
 
     # 3-Layer Charcoal Header Profile Bar (R1)
     market_val = player_row.get("market_value_eur", 0)
@@ -428,19 +456,19 @@ if player_row is not None:
     st.markdown(f"""
     <div class='profile-bar-grid'>
         <div class='profile-item'>
-            <span class='profile-label'>Market Valuation</span>
+            <span class='profile-label'>Market Value</span>
             <span class='profile-value'>{market_val_str}</span>
         </div>
         <div class='profile-item'>
-            <span class='profile-label'>Contract Expiry</span>
+            <span class='profile-label'>Contract Until</span>
             <span class='profile-value'>{expiry_str}</span>
         </div>
         <div class='profile-item'>
-            <span class='profile-label'>Est. Wage Tier</span>
+            <span class='profile-label'>Wage Band</span>
             <span class='profile-value'>{wage_tier_str}</span>
         </div>
         <div class='profile-item'>
-            <span class='profile-label'>Physical DNA</span>
+            <span class='profile-label'>Height / Weight</span>
             <span class='profile-value'>{physical_dna_str}</span>
         </div>
         <div class='profile-item'>
@@ -452,18 +480,16 @@ if player_row is not None:
             <span class='profile-value'>{nationality_str}</span>
         </div>
         <div class='profile-item'>
-            <span class='profile-label'>Role Codes</span>
+            <span class='profile-label'>Positions</span>
             <span class='profile-value'>{role_codes_str}</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
         
-    st.markdown("---")
-    
     # =========================================================================
     # CARD 1: PyPizza Tactical Radar & Continuous Pitch Action Heatmap (Side-by-Side)
     # =========================================================================
-    st.markdown("### 1 · TACTICAL PERCENTILE RADAR & SPATIAL DENSITY")
+    st.markdown("### Tactical Profile")
     
     col_radar, col_heatmap = st.columns([1.15, 1])
     
@@ -489,74 +515,66 @@ if player_row is not None:
         )
         st.pyplot(fig_heatmap, width="stretch")
         
-    # Core Statistical Snapshot banner directly beneath the dual canvases
-    st.markdown("#### • Core Statistical Snapshot")
-    snap_c1, snap_c2 = st.columns(2)
-    
-    with snap_c1:
-        if pos_group == "Goalkeeper":
-            st.markdown(f"""
-            - **PSxG +/- (Shot Stopping) / 90:** `{player_row.get('psxg_net_per90', 0)}` ({percentiles.get('psxg_net_per90', 50)}%ile)
-            - **Save Percentage:** `{player_row.get('save_pct', 0)}%` ({percentiles.get('save_pct', 50)}%ile)
-            - **Long Pass Distribution %:** `{player_row.get('passes_completed_long_pct', 0)}%` ({percentiles.get('passes_completed_long_pct', 50)}%ile)
-            """)
-        elif pos_group == "Centreback":
-            st.markdown(f"""
-            - **Progressive Passes / 90:** `{player_row.get('progressive_passes_per90', 0)}` ({percentiles.get('progressive_passes_per90', 50)}%ile)
-            - **Prog. Passing Distance / 90:** `{player_row.get('progressive_passing_distance_per90', 0)}m` ({percentiles.get('progressive_passing_distance_per90', 50)}%ile)
-            - **Pass Completion %:** `{player_row.get('pass_completion_pct', 0)}%` ({percentiles.get('pass_completion_pct', 50)}%ile)
-            """)
-        elif pos_group == "Centre-Forward / Striker":
-            st.markdown(f"""
-            - **Non-Penalty xG / 90:** `{player_row.get('npxG_per90', 0)}` ({percentiles.get('npxG_per90', 50)}%ile)
-            - **Shots on Target %:** `{player_row.get('shots_on_target_pct', 0)}%` ({percentiles.get('shots_on_target_pct', 50)}%ile)
-            - **Touches in Penalty Box / 90:** `{player_row.get('touches_att_pen_per90', 0)}` ({percentiles.get('touches_att_pen_per90', 50)}%ile)
-            """)
-        else:
-            st.markdown(f"""
-            - **Progressive Passes / 90:** `{player_row.get('progressive_passes_per90', 0)}` ({percentiles.get('progressive_passes_per90', 50)}%ile)
-            - **Progressive Carries / 90:** `{player_row.get('progressive_carries_per90', 0)}` ({percentiles.get('progressive_carries_per90', 50)}%ile)
-            - **Shot-Creating Actions (SCA) / 90:** `{player_row.get('sca_per90', 0)}` ({percentiles.get('sca_per90', 50)}%ile)
-            """)
+    # Core Statistical Snapshot grid directly beneath the dual canvases
+    st.markdown("#### Core Stats")
+    if pos_group == "Goalkeeper":
+        core_stats = [
+            ("PSxG Net / 90", f"{player_row.get('psxg_net_per90', 0)}", percentiles.get('psxg_net_per90', 50)),
+            ("Save %", f"{player_row.get('save_pct', 0)}%", percentiles.get('save_pct', 50)),
+            ("Long Pass %", f"{player_row.get('passes_completed_long_pct', 0)}%", percentiles.get('passes_completed_long_pct', 50)),
+            ("Sweeper Actions / 90", f"{player_row.get('def_actions_outside_pen_per90', 0)}", percentiles.get('def_actions_outside_pen_per90', 50)),
+            ("Crosses Claimed %", f"{player_row.get('crosses_stopped_pct', 0)}%", percentiles.get('crosses_stopped_pct', 50)),
+            ("Def Action Distance", f"{player_row.get('avg_dist_def_actions', 0)}m", percentiles.get('avg_dist_def_actions', 50)),
+        ]
+    elif pos_group == "Centreback":
+        core_stats = [
+            ("Prog. Passes / 90", f"{player_row.get('progressive_passes_per90', 0)}", percentiles.get('progressive_passes_per90', 50)),
+            ("Prog. Distance / 90", f"{player_row.get('progressive_passing_distance_per90', 0)}m", percentiles.get('progressive_passing_distance_per90', 50)),
+            ("Pass Completion %", f"{player_row.get('pass_completion_pct', 0)}%", percentiles.get('pass_completion_pct', 50)),
+            ("Aerial Duel Win %", f"{player_row.get('aerial_win_pct', 0)}%", percentiles.get('aerial_win_pct', 50)),
+            ("pAdj Tackles / 90", f"{player_row.get('padj_tackles_per90', 0)}", percentiles.get('padj_tackles_per90', 50)),
+            ("pAdj Interceptions / 90", f"{player_row.get('padj_interceptions_per90', 0)}", percentiles.get('padj_interceptions_per90', 50)),
+        ]
+    elif pos_group == "Centre-Forward / Striker":
+        core_stats = [
+            ("Non-Penalty xG / 90", f"{player_row.get('npxG_per90', 0)}", percentiles.get('npxG_per90', 50)),
+            ("Shots on Target %", f"{player_row.get('shots_on_target_pct', 0)}%", percentiles.get('shots_on_target_pct', 50)),
+            ("Box Touches / 90", f"{player_row.get('touches_att_pen_per90', 0)}", percentiles.get('touches_att_pen_per90', 50)),
+            ("SCA / 90", f"{player_row.get('sca_per90', 0)}", percentiles.get('sca_per90', 50)),
+            ("Aerial Duel Win %", f"{player_row.get('aerial_win_pct', 0)}%", percentiles.get('aerial_win_pct', 50)),
+            ("Att 3rd Tackles / 90", f"{player_row.get('tackles_att_3rd_per90', 0)}", percentiles.get('tackles_att_3rd_per90', 50)),
+        ]
+    else:
+        core_stats = [
+            ("Prog. Passes / 90", f"{player_row.get('progressive_passes_per90', 0)}", percentiles.get('progressive_passes_per90', 50)),
+            ("Prog. Carries / 90", f"{player_row.get('progressive_carries_per90', 0)}", percentiles.get('progressive_carries_per90', 50)),
+            ("SCA / 90", f"{player_row.get('sca_per90', 0)}", percentiles.get('sca_per90', 50)),
+            ("Pass Completion %", f"{player_row.get('pass_completion_pct', 0)}%", percentiles.get('pass_completion_pct', 50)),
+            ("Ball Recoveries / 90", f"{player_row.get('ball_recoveries_per90', 0)}", percentiles.get('ball_recoveries_per90', 50)),
+            ("pAdj Tackles / 90", f"{player_row.get('padj_tackles_per90', 0)}", percentiles.get('padj_tackles_per90', 50)),
+        ]
+
+    cells_html = "".join([
+        f"<div class='stat-cell'>"
+        f"<div class='stat-cell-label'>{lbl}</div>"
+        f"<div class='stat-cell-value'>{val}</div>"
+        f"<div class='stat-cell-pct'>{pct:.0f}%ile cohort</div>"
+        f"</div>"
+        for lbl, val, pct in core_stats
+    ])
+    st.markdown(f"<div class='stat-grid'>{cells_html}</div>", unsafe_allow_html=True)
             
-    with snap_c2:
-        if pos_group == "Goalkeeper":
-            st.markdown(f"""
-            - **Sweeper Keeper Actions / 90:** `{player_row.get('def_actions_outside_pen_per90', 0)}` ({percentiles.get('def_actions_outside_pen_per90', 50)}%ile)
-            - **Crosses Claimed / Stopped %:** `{player_row.get('crosses_stopped_pct', 0)}%` ({percentiles.get('crosses_stopped_pct', 50)}%ile)
-            - **pAdj Normalization:** Active relative to team clean possession share.
-            """)
-        elif pos_group == "Centreback":
-            st.markdown(f"""
-            - **Aerial Duel Win %:** `{player_row.get('aerial_win_pct', 0)}%` ({percentiles.get('aerial_win_pct', 50)}%ile)
-            - **pAdj Defensive Stops / 90:** `{player_row.get('padj_tackles_per90', 0)} Tackles / {player_row.get('padj_interceptions_per90', 0)} Ints`
-            - **pAdj Normalization:** Active (Sigrid Olthof / Sam Green baseline).
-            """)
-        elif pos_group == "Centre-Forward / Striker":
-            st.markdown(f"""
-            - **Shot-Creating Actions (SCA) / 90:** `{player_row.get('sca_per90', 0)}` ({percentiles.get('sca_per90', 50)}%ile)
-            - **Aerial Duel Win %:** `{player_row.get('aerial_win_pct', 0)}%` ({percentiles.get('aerial_win_pct', 50)}%ile)
-            - **pAdj Attacking Third Press:** `{player_row.get('tackles_att_3rd_per90', 0)}` ({percentiles.get('tackles_att_3rd_per90', 50)}%ile)
-            """)
-        else:
-            st.markdown(f"""
-            - **Pass Completion Rate:** `{player_row.get('pass_completion_pct', 0)}%` ({percentiles.get('pass_completion_pct', 50)}%ile)
-            - **pAdj Ball Recoveries / 90:** `{player_row.get('ball_recoveries_per90', 0)}` ({percentiles.get('ball_recoveries_per90', 50)}%ile)
-            - **pAdj Normalization:** Active (scaled against opponent possession).
-            """)
-            
-    st.info("**Spatial & Normalization Intelligence:** Heatmap uses continuous Gaussian KDE parameterized by match depth and box penetration; defensive stats are adjusted via **pAdj** relative to team possession baseline.")
+    st.caption("*pAdj normalized · Gaussian KDE spatial density*")
 
     # =========================================================================
     # CARD 2: Tactical Panel (Tactical Spectrum & Behavioral Indexes)
     # =========================================================================
-    st.markdown("---")
-    st.markdown("### 2 · POSITIONAL TACTICAL SPECTRUM & BEHAVIORAL INDEXES")
+    st.markdown("### Role Spectrum")
     
     col_spectrum, col_behavior = st.columns([1.2, 1.2])
     
     with col_spectrum:
-        st.markdown(f"#### Tactical Role Spectrum ({pos_group})")
+        st.markdown(f"#### Tactical Role ({pos_group})")
         st.markdown("*Continuous attribute weighting derived from match actions (0–100):*")
         
         for axis in spectrum["axes"]:
@@ -567,8 +585,8 @@ if player_row is not None:
             st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
             
     with col_behavior:
-        st.markdown("#### Universal Behavioral & Work-Rate Indexes")
-        st.markdown("*Quantifying off-the-ball intensity, retention, and progression (0–100):*")
+        st.markdown("#### Behavioral Indexes")
+        st.markdown("*Off-the-ball intensity, retention, and progression (0–100):*")
         
         c_b1, c_b2 = st.columns(2)
         with c_b1:
@@ -612,13 +630,12 @@ if player_row is not None:
     # =========================================================================
     # CARD 3: Deep Scouting Intelligence Card
     # =========================================================================
-    st.markdown("---")
-    st.markdown("### 3 · DEEP SCOUTING INTELLIGENCE & SYSTEM FIT REPORT")
+    st.markdown("### Scouting Report")
     
     col_traits, col_system = st.columns([1, 1.2])
     
     with col_traits:
-        st.markdown("#### • Elite Tactical Strengths (≥80th %ile)")
+        st.markdown("#### Strengths (≥80th %ile)")
         if scouting_intel["strengths"]:
             for s in scouting_intel["strengths"][:5]:
                 st.markdown(
@@ -628,7 +645,7 @@ if player_row is not None:
         else:
             st.write("Balanced performance across standard positional metrics.")
             
-        st.markdown("#### • Tactical Vulnerabilities & Blindspots (≤35th %ile)")
+        st.markdown("#### Vulnerabilities (≤35th %ile)")
         if scouting_intel["vulnerabilities"]:
             for v in scouting_intel["vulnerabilities"][:5]:
                 st.markdown(
@@ -639,7 +656,7 @@ if player_row is not None:
             st.write("No major statistical deficiencies in positional cohort.")
             
     with col_system:
-        st.markdown("#### Tactical System Context & Behavioral Observations")
+        st.markdown("#### System Context")
         if scouting_intel["system_notes"]:
             for note in scouting_intel["system_notes"]:
                 tone_class = f"intel-note-{note['tone']}"
@@ -655,9 +672,8 @@ if player_row is not None:
     # =========================================================================
     # CARD 4: Interactive Cohort Quadrant Benchmark
     # =========================================================================
-    st.markdown("---")
-    st.markdown("### 4 · COHORT QUADRANT BENCHMARK MATRIX")
-    st.markdown(f"Benchmarking **{player_row['player']}** against all **{len(cohort_df)}** players in the **{pos_group}** cohort with median thresholds.")
+    st.markdown("### Cohort Benchmark")
+    st.markdown(f"**{player_row['player']}** vs. {len(cohort_df)} players in the **{pos_group}** positional cohort.")
     
     col_x, col_y = st.columns(2)
     
@@ -698,9 +714,8 @@ if player_row is not None:
     # =========================================================================
     # CARD 5: Dynamic Multi-Player & Cohort Comparison Tool (R2)
     # =========================================================================
-    st.markdown("---")
-    st.markdown("### 5 · DYNAMIC MULTI-PROFILE & COHORT COMPARISON")
-    st.markdown(f"Benchmark **{player_row['player']}** against up to 3 additional footballers across Europe or toggle preset cohort baseline averages.")
+    st.markdown("### Comparison")
+    st.markdown(f"Compare **{player_row['player']}** against up to 3 players or cohort averages.")
 
     col_comp_players, col_comp_cohorts = st.columns([1.2, 1.0])
     
@@ -792,8 +807,7 @@ if player_row is not None:
     if not compared_profiles:
         st.markdown(
             f"<div style='background-color:{theme['card_bg']}; border:1px dashed {theme['border_color']}; border-radius:8px; padding:20px; text-align:center; color:{theme['text_secondary']}; margin-top:15px;'>"
-            f"<b>No Comparison Profiles Selected</b><br>"
-            f"Use the selectors above to add 1 to 3 footballers or toggle preset cohort averages to generate the overlapping polar radar, statistical delta table, and behavioral breakdown."
+            f"Add players above to compare tactical profiles side by side."
             f"</div>",
             unsafe_allow_html=True
         )
@@ -812,7 +826,7 @@ if player_row is not None:
         # ---------------------------------------------------------------------
         # 5.1 Overlapping Multi-Trace Polar Radar Chart
         # ---------------------------------------------------------------------
-        st.markdown("#### • Overlapping Tactical Multi-Trace Radar")
+        st.markdown("#### Overlapping Radar")
         st.markdown(f"*Comparing percentile ranks across {len(template_metrics)} positional metrics for **{len(all_radar_profiles)} profiles**:*")
         
         fig_multi_radar = create_multi_player_radar(
@@ -825,7 +839,7 @@ if player_row is not None:
         # ---------------------------------------------------------------------
         # 5.2 Side-by-Side Comparative Delta Table
         # ---------------------------------------------------------------------
-        st.markdown("#### • Side-by-Side Comparative Delta Matrix")
+        st.markdown("#### Delta Matrix")
         st.markdown(f"*Statistical differentials against base player (**{player_row['player']}**):*")
 
         delta_df = compute_comparison_deltas(
@@ -889,8 +903,8 @@ if player_row is not None:
         # ---------------------------------------------------------------------
         # 5.3 Comparative Behavioral Index Breakdown
         # ---------------------------------------------------------------------
-        st.markdown("#### • Comparative Behavioral & Work-Rate Index Breakdown")
-        st.markdown("*Side-by-side comparison across 4 universal off-the-ball indexes (0–100):*")
+        st.markdown("#### Behavioral Breakdown")
+        st.markdown("*Side-by-side across 4 universal indexes (0–100):*")
 
         index_keys = [
             ("High-Press & Work-Rate", "HPWI"),
@@ -919,10 +933,10 @@ if player_row is not None:
                     delta_score = c_score - base_score
 
                     if delta_score > 0:
-                        d_style = "color:#10B981; font-weight:700;"
+                        d_style = f"color:{theme.get('positive_color', '#10B981')}; font-weight:700;"
                         d_text = f"+{delta_score:.0f}"
                     elif delta_score < 0:
-                        d_style = "color:#E06D53; font-weight:700;"
+                        d_style = f"color:{theme.get('negative_color', '#E06D53')}; font-weight:700;"
                         d_text = f"{delta_score:.0f}"
                     else:
                         d_style = f"color:{theme['text_secondary']}; font-weight:600;"

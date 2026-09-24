@@ -182,7 +182,7 @@ METRIC_LABELS: Dict[str, str] = {
 # Professional Theme & Color Palette Configurations
 # --------------------------------------------------------------------------
 COLOR_PALETTES = {
-    "Opta Pro (Midnight Pitch)": {
+    "Opta Dark": {
         "canvas_bg": "#0B0F17",
         "card_bg": "#151D2A",
         "border_color": "#233044",
@@ -190,6 +190,9 @@ COLOR_PALETTES = {
         "text_secondary": "#94A3B8",
         "grid_color": "#1E293B",
         "accent_color": "#F59E0B",
+        "positive_color": "#10B981",
+        "negative_color": "#F59E0B",
+        "heatmap_cmap": "inferno",
         "slice_colors": {
             "Attacking & Creation": "#F59E0B",
             "Attacking & Goal Threat": "#F59E0B",
@@ -209,7 +212,7 @@ COLOR_PALETTES = {
             "Sweeping & Aerial Command": "#10B981"
         }
     },
-    "The Athletic (Editorial Pitch)": {
+    "The Athletic": {
         "canvas_bg": "#111215",
         "card_bg": "#1A1C23",
         "border_color": "#2A2D38",
@@ -217,6 +220,9 @@ COLOR_PALETTES = {
         "text_secondary": "#A5A7AF",
         "grid_color": "#262833",
         "accent_color": "#E06D53",
+        "positive_color": "#4E876A",
+        "negative_color": "#E06D53",
+        "heatmap_cmap": "inferno",
         "slice_colors": {
             "Attacking & Creation": "#E06D53",
             "Attacking & Goal Threat": "#E06D53",
@@ -236,7 +242,7 @@ COLOR_PALETTES = {
             "Sweeping & Aerial Command": "#4E876A"
         }
     },
-    "Linear Carbon (Minimalist Swiss)": {
+    "Monochrome": {
         "canvas_bg": "#090A0C",
         "card_bg": "#13151A",
         "border_color": "#222630",
@@ -244,6 +250,9 @@ COLOR_PALETTES = {
         "text_secondary": "#8B949E",
         "grid_color": "#1C2028",
         "accent_color": "#F43F5E",
+        "positive_color": "#14B8A6",
+        "negative_color": "#F43F5E",
+        "heatmap_cmap": "magma",
         "slice_colors": {
             "Attacking & Creation": "#F43F5E",
             "Attacking & Goal Threat": "#F43F5E",
@@ -263,7 +272,7 @@ COLOR_PALETTES = {
             "Sweeping & Aerial Command": "#14B8A6"
         }
     },
-    "DataMB Studio (Scandinavian Deep)": {
+    "DataMB": {
         "canvas_bg": "#080E15",
         "card_bg": "#101C27",
         "border_color": "#1C2E3F",
@@ -271,6 +280,9 @@ COLOR_PALETTES = {
         "text_secondary": "#7E92A2",
         "grid_color": "#182635",
         "accent_color": "#FF6B6B",
+        "positive_color": "#6BCB77",
+        "negative_color": "#FF6B6B",
+        "heatmap_cmap": "magma",
         "slice_colors": {
             "Attacking & Creation": "#FF6B6B",
             "Attacking & Goal Threat": "#FF6B6B",
@@ -292,7 +304,13 @@ COLOR_PALETTES = {
     }
 }
 
-DEFAULT_PALETTE_NAME = "The Athletic (Editorial Pitch)"
+# Backwards-compatible aliases for tests and scripts
+COLOR_PALETTES["The Athletic (Editorial Pitch)"] = COLOR_PALETTES["The Athletic"]
+COLOR_PALETTES["Opta Pro (Midnight Pitch)"] = COLOR_PALETTES["Opta Dark"]
+COLOR_PALETTES["Linear Carbon (Minimalist Swiss)"] = COLOR_PALETTES["Monochrome"]
+COLOR_PALETTES["DataMB Studio (Scandinavian Deep)"] = COLOR_PALETTES["DataMB"]
+
+DEFAULT_PALETTE_NAME = "The Athletic"
 RADAR_THEME = {
     "background_color": COLOR_PALETTES[DEFAULT_PALETTE_NAME]["card_bg"],
     "slice_colors": COLOR_PALETTES[DEFAULT_PALETTE_NAME]["slice_colors"],
